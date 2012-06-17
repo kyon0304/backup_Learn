@@ -1,0 +1,6 @@
+Script started on 2011年12月02日 星期五 18时01分21秒
+]0;wangying@kyon: ~/Learn/shell[01;30mwangying@kyon[00m:[01;34m~/Learn/shell[00m$ ./sleep.sh 
+Count:78[J18[J28[J38[J4]0;wangying@kyon: ~/Learn/shell[01;30mwangying@kyon[00m:[01;34m~/Learn/shell[00m$ exit
+exit
+
+Script done on 2011年12月02日 星期五 18时01分30秒
