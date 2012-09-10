@@ -3,6 +3,7 @@
 # date: 2012-09-07 author: kyon
 
 from datetime import *
+
 name = raw_input("input your file's name > ")
 f = open(name, 'w')
 f.write("#! /usr/bin/env python\n")

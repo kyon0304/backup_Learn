@@ -1,3 +1,3 @@
 #! /usr/bin/env python
 # file: urlopenAuth.py
-# date: [Fri Sep  7 20:10:58 2012] author: kyon
+# date: 2012-09-07 author: kyon
