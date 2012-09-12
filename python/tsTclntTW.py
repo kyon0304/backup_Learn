@@ -12,6 +12,7 @@ class TSClntProtocol(protocol.Protocol):
         data = raw_input('>')
         if data:
             print '...sending %s...' % data
+            self.transport.write(data)
         else:
             self.transport.loseConnection()
 
