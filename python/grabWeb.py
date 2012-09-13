@@ -15,11 +15,11 @@ def firstLast(webpage):
     f = open(webpage)
     lines = f.readlines()
     f.close()
-    print firstNonBlank(lines)
+    print firstNonBlank(lines),
     lines.reverse()
-    print firstNonBlank(linexs)
+    print firstNonBlank(lines),
 
-def download(url = 'http://www', process = firstLast):
+def download(url = 'http://www.google.com', process = firstLast):
     try:
         retval = urlretrieve(url)[0]
     except IOError:

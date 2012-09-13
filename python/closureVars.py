@@ -38,4 +38,3 @@ if clo:
 else:
     print "no f1 closure vars"
 f1()
-
