@@ -1,5 +1,6 @@
 #! /usr/bin/env python
-# file: createNew.py -- create new python file with template
+# -*- coding: UTF-8 -*-
+# file: createNew.py -- 使用模版创建新的python文件
 # date: 2012-09-07 author: kyon
 
 from datetime import *
@@ -17,6 +18,7 @@ def getName():
 def create(name):
     f = open(name, 'w')
     f.write("#! /usr/bin/env python\n")
+    f.write("# -*- coding: UTF-8 -*-\n")
     f.write("# file: %s\n" % name)
     f.write("# date: ") 
     f.write(datetime.now().strftime("%Y-%m-%d"))
