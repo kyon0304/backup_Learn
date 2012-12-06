@@ -5,27 +5,34 @@
 
 import os, sys
 from PIL import Image
+import shutil
+import json
 
-def test():
-    for i in sys.argv:
-        print i,
-    print
+MAX_BYTES = 10*1024
+SCALE = {
+            'notSpecified' : (2,),
+            'small' : (1, 480, 480),
+            'middle' : (1, 640, 640),
+            'large' : (1, 1440, 900)
+        }
 
-def generate(infile, width, height, max_bytes=(80*1024)):
+
+def generate(infile, width, height, max_bytes=MAX_BYTES):
     '''
         如果图片小于80K则不进行缩放
         第一个参数：图片路径+图片名
         第二个和第三个参数：图片宽和高
     '''
+    if os.path.splitext(infile)[-1] in ('.txt', '.json'):
+        return "pass|" + infile
     length = os.path.getsize(infile)
     if length < max_bytes:
-        print "little enough"
-        return infile
+        print infile, length, "little enough"
+        return "origin|" + infile + '|' + infile
 
     size = width, height
-    print infile
-#    outfile = os.path.splitext(infile)[0]+".thumb"
-    outfile = infile.split('.')[0]+'.thumb'
+    name, suffix = os.path.splitext(infile)
+    outfile = name + '_w' + str(width) + 'h' + str(height) + suffix
     if infile != outfile:
         try:
             im = Image.open(infile)
@@ -33,56 +40,86 @@ def generate(infile, width, height, max_bytes=(80*1024)):
             im.save(outfile, "JPEG")
         except IOError:
             print "cannot create thumbnail for '%s'" % infile
-    return outfile
+    return "thumb|" + infile + '|' + outfile
 
-def oneThumb():
+def oneThumb(filename, dirname, width, height, scale, max_bytes = MAX_BYTES):
     '''
         单个图生成缩略图
     '''
-    argc = len(sys.argv)
-    filename = sys.argv[1]
-    if argc == 2:
-        width, heigh = 640, 480
-        max_bytes = 80*1024
-    elif argc == 4:
-        width, height = int(sys.argv[2]), int (sys.argv[3])
-        max_bytes = 80*1024
-    elif argc == 5:
-        width, height = int(sys.argv[2]), int (sys.argv[3])
-        max_bytes = int(sys.argv[4])
-    else:
-        print 'wrong input number!'
-        return
-    generate(filename, width, height, max_bytes)
+    if scale != 'notSpecified':
+        width = SCALE[scale][1]
+        height = SCALE[scale][2]
+    thumbFolder = os.path.join(dirname, 'thumb_'+scale)
+    if not os.path.exists(thumbFolder):
+        os.mkdir(thumbFolder)
 
-def moreThumb():
-    width = int(raw_input("Input wanted width:"))
-    height = int(raw_input("Input wanted height:"))
-    max_bytes = int(raw_input("Input wanted maxbytes:"))
-    thumbdir = 'thumb'+'w'+str(width)+'h'+str(height)
-    if len(sys.argv)==2 and os.path.isdir(sys.argv[1]):
+    fullname = os.path.join(dirname, filename)
+    thumbFolder = os.path.join(dirname, 'thumb_'+scale)
+    thumbFile = os.path.join(thumbFolder, os.path.splitext(filename)[0]+'_w'+str(width)+'h'+str(height)+os.path.splitext(filename)[1])
+    if os.path.exists(thumbFile):
+        return thumbFile
+    outname = generate(fullname, width, height, max_bytes).split('|')
+    #print outname
+    if outname[0] == 'pass':
+        return 'notFound.jpg'
+    fullThumbName = os.path.join(thumbFolder, os.path.basename(outname[2]))
+    if outname[0] == 'origin':
+        shutil.copyfile(outname[1], fullThumbName)
+    elif outname[0] == 'thumb':
+        os.rename(outname[2], fullThumbName)
+    #idxFullThumbName = os.path.join(os.path.sep, fullThumbName)
+    #return idxFullThumbName
+    return fullThumbName
+	
+def moreThumb(dirname, max_bytes = MAX_BYTES):
+    imgLists = []
+    if os.path.isdir(dirname):
         '''
-            图集--整个文件夹生成缩略图，存放在 文件夹名_thumbwXXhYY 文件夹下
+            图集--整个文件夹生成缩略图，文件夹名_thumb 文件夹下
+            #存放在 文件夹名_thumbwXXhYY 文件夹下
             .jpg的是原图足够小，没有经过缩放.thumb是w为XX, h为YY的缩略图
         '''
-        for root, dirs, files in os.walk(sys.argv[1]):
+        urlfile = os.path.join(dirname, 'index.json')
+        for root, dirs, files in os.walk(dirname):
             for name in files:
-                fullname = os.path.join(root, name)
-                outname = generate(fullname, width, height, max_bytes)
-                print name
-                fullThumbName = os.path.join(os.path.dirname(outname)+'_'+thumbdir,os.path.basename(outname))
-                if not os.path.exists(os.path.dirname(fullThumbName)):
-                    os.mkdir(os.path.dirname(fullThumbName))
-                os.rename(outname, fullThumbName)
-            if '.svn' in dirs:
-                dirs.remove('.svn')
-    else:
-        '''
-            图集--多选生成缩略图, 文件名_thumbwXXhYY.thumb
-        '''
-        for name in sys.argv[1:]:
-            outname = generate(name, width, height, max_bytes)
-            os.rename(outname, outname.split('.')[0]+'_thumbw'+str(width)+'h'+str(height)+'.thumb')
+                if os.path.splitext(name)[-1] not in ('.txt', '.json'):
+                    url = '/single/?image=%s&scale=&imgWidth=&imgHeight=' % name
+                    imgLists.append(url)
+            del dirs[:]#消除递归，只列第一层文件
+        try:
+			uf = open(urlfile, 'wr')
+			jsonstr = json.dumps(imgLists)
+			uf.write(jsonstr)
+			uf.close()
+        except IOError, TypeError:
+			print 'Something goes wrong while open %s' % urlfile
+        return urlfile
+			
+def genIndex(imgLists):
+    originfile = os.path.join(os.path.dirname(imgLists[0]),"index.txt")
+    try:
+        of = open(originfile, 'wr')
+        [of.write(i+'|') for i in imgLists]
+        of.close()
+    except IOError, TypeError:
+        print 'something wrong occured while open "%s"' % filename
+        print len(imgLists), imgLists
+
+def genJSON(imgLists):
+    originfile = os.path.join(os.path.dirname(imgLists[0]), "index.json")
+    try:
+        of = open(originfile, 'wr')
+        jsonstr = json.dumps(imgLists)
+        of.write(jsonstr)
+        of.close()
+    except IOError, TypeError:
+        print 'something wrong occured while open "%s"' % filename
+        print len(imgLists), imgLists
+    
 
 if __name__ == '__main__':
-    moreThumb()
+    out = moreThumb('../static/data/img/png', 0, 0, 'middle')
+#    out = moreThumb('../img/png', 480, 480)
+#    genIndex(out)
+    genJSON(out)
+    #print out
